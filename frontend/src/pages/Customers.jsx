@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,10 +29,12 @@ const Customers = () => {
     resolver: zodResolver(customerSchema)
   });
 
+  const [statusFilter, setStatusFilter] = useState('');
+
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/customers?search=${search}`);
+      const res = await api.get(`/customers?search=${search}&status=${statusFilter}`);
       setCustomers(res.data.data.items);
     } catch (error) {
       toast.error('Failed to fetch customers');
@@ -45,7 +49,7 @@ const Customers = () => {
       fetchCustomers();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [search]);
+  }, [search, statusFilter]);
 
   const onSubmit = async (data) => {
     try {
@@ -67,14 +71,13 @@ const Customers = () => {
 
   const handleEdit = (customer) => {
     setEditingId(customer.id);
-    // Fetch full details if needed, or just set from table
     api.get(`/customers/${customer.id}`).then(res => {
       const fullCust = res.data.data;
       setValue('first_name', fullCust.first_name);
       setValue('last_name', fullCust.last_name);
       setValue('email', fullCust.email);
       setValue('phone', fullCust.phone);
-      setValue('dob', fullCust.dob.split('T')[0]); // Date format
+      setValue('dob', fullCust.dob.split('T')[0]); 
       setValue('address', fullCust.address);
       setValue('government_id', fullCust.government_id);
       setIsModalOpen(true);
@@ -93,8 +96,34 @@ const Customers = () => {
     }
   };
 
+  const handleRestore = async (id) => {
+    try {
+      await api.patch(`/customers/${id}/restore`);
+      toast.success('Customer restored');
+      fetchCustomers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to restore');
+    }
+  };
+
+  if (loading && customers.length === 0) {
+    return (
+      <div className="p-6 h-full flex flex-col gap-6 animate-pulse">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="h-10 bg-muted rounded w-32"></div>
+        </div>
+        <div className="h-[400px] bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Customers</h1>
@@ -112,6 +141,14 @@ const Customers = () => {
               className="pl-9 pr-4 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary w-64"
             />
           </div>
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-input rounded-md px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary"
+          >
+            <option value="">Active</option>
+            <option value="DELETED">Deleted</option>
+          </select>
           <button
             onClick={() => { reset(); setEditingId(null); setIsModalOpen(true); }}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
@@ -142,7 +179,9 @@ const Customers = () => {
                 customers.map((c) => (
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-foreground">
-                      {c.first_name} {c.last_name}
+                      <Link to={`/customers/${c.id}/profile`} className="text-primary hover:underline">
+                        {c.first_name} {c.last_name}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-foreground">{c.email}</div>
@@ -157,12 +196,20 @@ const Customers = () => {
                       {c.policies_count} Active
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button onClick={() => handleEdit(c)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 dark:text-red-400 p-1">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {c.status !== 'DELETED' ? (
+                        <>
+                          <button onClick={() => handleEdit(c)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1">
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 dark:text-red-400 p-1">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => handleRestore(c.id)} className="text-green-600 hover:text-green-800 dark:text-green-400 p-1 font-medium text-xs">
+                          Restore
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -230,7 +277,7 @@ const Customers = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

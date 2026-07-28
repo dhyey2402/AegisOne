@@ -11,7 +11,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
+      // Check localStorage first (remember me), then sessionStorage
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
       if (token) {
         try {
           const response = await api.get('/auth/me');
@@ -20,6 +21,8 @@ export const AuthProvider = ({ children }) => {
           console.error("Failed to fetch user profile", error);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          sessionStorage.removeItem('access_token');
+          sessionStorage.removeItem('refresh_token');
         }
       }
       setLoading(false);
@@ -27,15 +30,23 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = (userData, accessToken, refreshToken) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
+  const login = (userData, accessToken, refreshToken, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    
+    // Clear the other storage just in case
+    (rememberMe ? sessionStorage : localStorage).removeItem('access_token');
+    (rememberMe ? sessionStorage : localStorage).removeItem('refresh_token');
+
+    storage.setItem('access_token', accessToken);
+    storage.setItem('refresh_token', refreshToken);
     setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
     setUser(null);
   };
 

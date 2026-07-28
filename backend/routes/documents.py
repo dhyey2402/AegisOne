@@ -3,7 +3,7 @@ import uuid
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app import db
+from extensions import db
 from models.document import Document
 
 document_bp = Blueprint('documents', __name__)
@@ -31,33 +31,18 @@ def upload_document():
         return jsonify({'status': 'error', 'message': 'entity_type and entity_id are required'}), 400
 
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # Unique filename to prevent overwriting
-        unique_filename = f"{uuid.uuid4()}_{filename}"
-        
         upload_folder = os.path.join(current_app.root_path, 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-        file_path = os.path.join(upload_folder, unique_filename)
         
-        file.save(file_path)
+        from services.document_service import DocumentService
+        doc, error = DocumentService.upload_document(file, entity_type, entity_id, doc_type, get_jwt_identity(), upload_folder)
         
-        new_doc = Document(
-            entity_type=entity_type,
-            entity_id=entity_id,
-            document_type=doc_type,
-            file_name=filename,
-            file_path=unique_filename,
-            file_size=os.path.getsize(file_path),
-            mime_type=file.mimetype,
-            uploaded_by=get_jwt_identity()
-        )
-        db.session.add(new_doc)
-        db.session.commit()
-        
+        if error:
+            return jsonify({'status': 'error', 'message': error}), 400
+            
         return jsonify({
             'status': 'success', 
             'message': 'File uploaded successfully',
-            'data': {'id': new_doc.id, 'file_name': filename}
+            'data': {'id': doc.id, 'file_name': doc.file_name}
         }), 201
         
     return jsonify({'status': 'error', 'message': 'File type not allowed'}), 400

@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 const claimSchema = z.object({
   policy_id: z.string().min(1, 'Policy is required'),
@@ -55,8 +56,11 @@ const Claims = () => {
 
   useEffect(() => {
     fetchClaims();
-    fetchPolicies();
   }, [statusFilter]);
+
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
 
   const onSubmitClaim = async (data) => {
     try {
@@ -88,8 +92,24 @@ const Claims = () => {
     }
   };
 
+  if (loading && claims.length === 0) {
+    return (
+      <div className="p-6 h-full flex flex-col gap-6 animate-pulse">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="h-10 bg-muted rounded w-32"></div>
+        </div>
+        <div className="h-[400px] bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Claims Processing</h1>
@@ -151,7 +171,7 @@ const Claims = () => {
                       {c.reason}
                     </td>
                     <td className="px-6 py-4 font-bold">
-                      ${c.claim_amount.toLocaleString()}
+                      ₹{c.claim_amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium 
@@ -203,7 +223,7 @@ const Claims = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Claim Amount ($)</label>
+                  <label className="block text-sm font-medium mb-1">Claim Amount (₹)</label>
                   <input type="number" step="0.01" {...register('claim_amount', { valueAsNumber: true })} className="w-full border rounded px-3 py-2 bg-background focus:ring-1 focus:ring-primary outline-none" />
                   {errors.claim_amount && <p className="text-destructive text-xs mt-1">{errors.claim_amount.message}</p>}
                 </div>
@@ -241,7 +261,7 @@ const Claims = () => {
             
             <div className="p-6 space-y-4">
               <div className="bg-muted p-4 rounded-md">
-                <p className="text-sm"><strong>Requested Amount:</strong> ${selectedClaim.claim_amount.toLocaleString()}</p>
+                <p className="text-sm"><strong>Requested Amount:</strong> ₹{selectedClaim.claim_amount.toLocaleString()}</p>
                 <p className="text-sm mt-1"><strong>Reason:</strong> {selectedClaim.reason}</p>
               </div>
               
@@ -257,7 +277,7 @@ const Claims = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Approved Settlement Amount ($) <span className="text-muted-foreground font-normal">(if approving)</span></label>
+                <label className="block text-sm font-medium mb-1">Approved Settlement Amount (₹) <span className="text-muted-foreground font-normal">(if approving)</span></label>
                 <input 
                   type="number" 
                   step="0.01" 
@@ -272,10 +292,10 @@ const Claims = () => {
             <div className="px-6 py-4 border-t border-border bg-muted/30 flex justify-between items-center">
               <button onClick={() => handleReview('UNDER_REVIEW')} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Mark Under Review</button>
               <div className="flex gap-3">
-                <button onClick={() => handleReview('REJECT')} className="flex items-center gap-1 bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200 transition-colors">
+                <button onClick={() => handleReview('REJECTED')} className="flex items-center gap-1 bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200 transition-colors">
                   <XCircle className="h-4 w-4" /> Reject
                 </button>
-                <button onClick={() => handleReview('APPROVE')} className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                <button onClick={() => handleReview('APPROVED')} className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
                   <CheckCircle className="h-4 w-4" /> Approve
                 </button>
               </div>
@@ -283,7 +303,7 @@ const Claims = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

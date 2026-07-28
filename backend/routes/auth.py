@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
-from app import db, bcrypt
+from extensions import db, bcrypt
 from models.user import User
 
 auth_bp = Blueprint('auth', __name__)
@@ -42,11 +42,14 @@ def register():
         }
     }), 201
 
+from datetime import timedelta
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    remember_me = data.get('remember_me', False)
     
     user = User.query.filter_by(email=email).first()
     
@@ -57,8 +60,12 @@ def login():
         return jsonify({'status': 'error', 'message': 'Account is disabled'}), 403
         
     additional_claims = {'role': user.role}
-    access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
-    refresh_token = create_refresh_token(identity=user.id, additional_claims=additional_claims)
+    
+    # If remember me is checked, token lasts 30 days, else 1 day.
+    expires_delta = timedelta(days=30) if remember_me else timedelta(days=1)
+    
+    access_token = create_access_token(identity=user.id, additional_claims=additional_claims, expires_delta=expires_delta)
+    refresh_token = create_refresh_token(identity=user.id, additional_claims=additional_claims, expires_delta=timedelta(days=30))
     
     return jsonify({
         'status': 'success',

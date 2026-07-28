@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app import db
+from extensions import db
 from models.policy import Policy
 from models.customer import Customer
+from sqlalchemy.orm import contains_eager
 from datetime import datetime
+from utils.time import get_ist_now
 
 policy_bp = Blueprint('policies', __name__)
 
@@ -15,7 +17,7 @@ def get_policies():
     search = request.args.get('search', '')
     status = request.args.get('status', '')
     
-    query = Policy.query.join(Customer)
+    query = Policy.query.join(Customer).options(contains_eager(Policy.customer))
     
     # RBAC logic
     claims = get_jwt()
@@ -72,46 +74,49 @@ def create_policy():
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
     data = request.get_json()
-    
-    # Generate unique policy number
-    policy_num = f"POL-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    from datetime import datetime
+    from utils.time import get_ist_now
+    policy_num = f"POL-{get_ist_now().strftime('%Y%m%d%H%M%S')}"
     
     try:
-        new_policy = Policy(
-            policy_number=policy_num,
-            customer_id=data.get('customer_id'),
-            agent_id=get_jwt_identity(),
-            policy_type=data.get('policy_type'),
-            coverage_amount=data.get('coverage_amount'),
-            premium_amount=data.get('premium_amount'),
-            start_date=datetime.strptime(data.get('start_date'), '%Y-%m-%d').date(),
-            end_date=datetime.strptime(data.get('end_date'), '%Y-%m-%d').date(),
-            status='ACTIVE'
-        )
-        db.session.add(new_policy)
-        db.session.commit()
-        
+        from services.policy_service import PolicyService
+        new_policy = PolicyService.create_policy(data, get_jwt_identity(), policy_num)
         return jsonify({'status': 'success', 'message': 'Policy created successfully', 'data': {'id': new_policy.id, 'policy_number': policy_num}}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
-@policy_bp.route('/<string:policy_id>', methods=['PUT'])
+@policy_bp.route('/<string:policy_id>/status', methods=['PUT'])
 @jwt_required()
-def update_policy(policy_id):
+def change_policy_status(policy_id):
     claims = get_jwt()
     if claims.get('role') not in ['ADMIN', 'AGENT']:
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
-    policy = Policy.query.get(policy_id)
-    if not policy:
-        return jsonify({'status': 'error', 'message': 'Policy not found'}), 404
+    data = request.get_json()
+    new_status = data.get('status')
+    if new_status not in ['ACTIVE', 'CANCELLED', 'SUSPENDED']:
+        return jsonify({'status': 'error', 'message': 'Invalid status'}), 400
+
+    from services.policy_service import PolicyService
+    success = PolicyService.update_status(policy_id, new_status, get_jwt_identity())
+    if success:
+        return jsonify({'status': 'success', 'message': f'Policy status updated to {new_status}'}), 200
+    return jsonify({'status': 'error', 'message': 'Policy not found'}), 404
+
+@policy_bp.route('/<string:policy_id>/renew', methods=['PUT'])
+@jwt_required()
+def renew_policy(policy_id):
+    claims = get_jwt()
+    if claims.get('role') not in ['ADMIN', 'AGENT']:
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
     data = request.get_json()
-    
-    policy.status = data.get('status', policy.status)
-    if data.get('end_date'):
-        policy.end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d').date()
-    
-    db.session.commit()
-    return jsonify({'status': 'success', 'message': 'Policy updated successfully'}), 200
+    extra_years = int(data.get('extra_years', 1))
+
+    from services.policy_service import PolicyService
+    success = PolicyService.renew_policy(policy_id, extra_years, get_jwt_identity())
+    if success:
+        return jsonify({'status': 'success', 'message': f'Policy renewed for {extra_years} years'}), 200
+    return jsonify({'status': 'error', 'message': 'Policy not found'}), 404
+

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from utils.time import get_ist_now
 from app import db
 
 class Document(db.Model):
@@ -19,5 +20,5 @@ class Document(db.Model):
     
     uploaded_by = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_ist_now)
+    updated_at = db.Column(db.DateTime, default=get_ist_now, onupdate=get_ist_now)

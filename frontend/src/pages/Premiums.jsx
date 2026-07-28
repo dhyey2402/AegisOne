@@ -5,9 +5,9 @@ import { CreditCard, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { motion } from 'framer-motion';
 
 const paymentSchema = z.object({
-  policy_id: z.string().min(1, 'Policy is required'),
   amount: z.number().min(1, 'Amount is required'),
 });
 
@@ -45,12 +45,28 @@ const Premiums = () => {
 
   useEffect(() => {
     fetchPayments();
-    fetchPolicies();
   }, [statusFilter]);
 
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
+
+  const handlePrintReceipt = (payment) => {
+    window.open(`/receipt/${payment.id}`, '_blank');
+  };
+
+  const [selectedPremium, setSelectedPremium] = useState(null);
+
+  const openPaymentModal = (premium) => {
+    setSelectedPremium(premium);
+    reset({ amount: premium.amount });
+    setIsModalOpen(true);
+  };
+
   const onSubmit = async (data) => {
+    if (!selectedPremium) return;
     try {
-      await api.post('/premiums', data);
+      await api.put(`/premiums/${selectedPremium.id}/pay`, data);
       toast.success('Payment recorded successfully');
       setIsModalOpen(false);
       reset();
@@ -60,8 +76,27 @@ const Premiums = () => {
     }
   };
 
+  if (loading && payments.length === 0) {
+    return (
+      <div className="p-6 h-full flex flex-col gap-6 animate-pulse">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="h-10 bg-muted rounded w-32"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {[1,2,3].map(i => <div key={i} className="h-24 bg-muted rounded-xl"></div>)}
+        </div>
+        <div className="h-[400px] bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Premium Payments</h1>
@@ -79,12 +114,6 @@ const Premiums = () => {
             <option value="PAID">Paid</option>
             <option value="OVERDUE">Overdue</option>
           </select>
-          <button
-            onClick={() => { reset(); setIsModalOpen(true); }}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
-          >
-            <DollarSign className="h-4 w-4" /> Record Payment
-          </button>
         </div>
       </div>
 
@@ -93,14 +122,14 @@ const Premiums = () => {
           <div className="p-3 bg-green-100 text-green-600 rounded-lg"><CheckCircle className="h-6 w-6" /></div>
           <div>
             <p className="text-sm text-muted-foreground font-medium">Collected Premium</p>
-            <p className="text-2xl font-bold mt-1">${payments.filter(p => p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
+            <p className="text-2xl font-bold mt-1">₹{payments.filter(p => p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-card p-6 rounded-xl border border-border shadow-sm flex items-center gap-4">
           <div className="p-3 bg-amber-100 text-amber-600 rounded-lg"><Clock className="h-6 w-6" /></div>
           <div>
             <p className="text-sm text-muted-foreground font-medium">Pending Premium</p>
-            <p className="text-2xl font-bold mt-1">${payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
+            <p className="text-2xl font-bold mt-1">₹{payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-card p-6 rounded-xl border border-border shadow-sm flex items-center gap-4">
@@ -122,7 +151,7 @@ const Premiums = () => {
                 <th className="px-6 py-3 font-medium">Amount</th>
                 <th className="px-6 py-3 font-medium">Due Date</th>
                 <th className="px-6 py-3 font-medium">Status</th>
-                <th className="px-6 py-3 font-medium">Receipt</th>
+                <th className="px-6 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -140,7 +169,7 @@ const Premiums = () => {
                       {p.customer_name}
                     </td>
                     <td className="px-6 py-4 font-bold text-foreground">
-                      ${p.amount.toLocaleString()}
+                      ₹{p.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
                       {p.due_date}
@@ -150,8 +179,16 @@ const Premiums = () => {
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {p.receipt_number || '-'}
+                    <td className="px-6 py-4 text-right space-x-2">
+                      {p.status !== 'PAID' ? (
+                        <button onClick={() => openPaymentModal(p)} className="text-primary hover:underline font-medium">
+                          Pay Now
+                        </button>
+                      ) : (
+                        <button onClick={() => handlePrintReceipt(p)} className="text-primary hover:underline font-medium">
+                          Print Receipt
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -172,18 +209,11 @@ const Premiums = () => {
             <div className="p-6">
               <form id="paymentForm" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Policy</label>
-                  <select {...register('policy_id')} className="w-full border rounded px-3 py-2 bg-background focus:ring-1 focus:ring-primary outline-none">
-                    <option value="">Select Active Policy...</option>
-                    {policies.map(p => (
-                      <option key={p.id} value={p.id}>{p.policy_number} - {p.customer_name}</option>
-                    ))}
-                  </select>
-                  {errors.policy_id && <p className="text-destructive text-xs mt-1">{errors.policy_id.message}</p>}
+                  <label className="block text-sm font-medium mb-1">Paying for Policy: {selectedPremium?.policy_number}</label>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Payment Amount ($)</label>
+                  <label className="block text-sm font-medium mb-1">Payment Amount (₹)</label>
                   <input type="number" step="0.01" {...register('amount', { valueAsNumber: true })} className="w-full border rounded px-3 py-2 bg-background focus:ring-1 focus:ring-primary outline-none" />
                   {errors.amount && <p className="text-destructive text-xs mt-1">{errors.amount.message}</p>}
                 </div>
@@ -197,7 +227,7 @@ const Premiums = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

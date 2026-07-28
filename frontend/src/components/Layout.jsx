@@ -17,6 +17,7 @@ const Layout = () => {
     { name: 'Policies', path: '/policies', icon: FileText },
     { name: 'Claims', path: '/claims', icon: Activity },
     { name: 'Premiums', path: '/premiums', icon: CreditCard },
+    { name: 'Documents', path: '/documents', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 

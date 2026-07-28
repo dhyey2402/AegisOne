@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app import db
+from extensions import db
 from models.claim import Claim
 from models.policy import Policy
 from models.customer import Customer
+from sqlalchemy.orm import contains_eager
 from datetime import datetime
+from utils.time import get_ist_now
 
 claim_bp = Blueprint('claims', __name__)
 
@@ -15,7 +17,10 @@ def get_claims():
     per_page = request.args.get('limit', 10, type=int)
     status = request.args.get('status', '')
     
-    query = Claim.query.join(Policy).join(Customer)
+    query = Claim.query.join(Claim.policy).join(Claim.customer).options(
+        contains_eager(Claim.policy),
+        contains_eager(Claim.customer)
+    )
     
     claims = get_jwt()
     role = claims.get('role')
@@ -64,7 +69,7 @@ def submit_claim():
     if not policy:
         return jsonify({'status': 'error', 'message': 'Policy not found'}), 404
         
-    claim_num = f"CLM-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    claim_num = f"CLM-{get_ist_now().strftime('%Y%m%d%H%M%S')}"
     
     new_claim = Claim(
         claim_number=claim_num,
@@ -93,22 +98,14 @@ def review_claim(claim_id):
         return jsonify({'status': 'error', 'message': 'Claim not found'}), 404
 
     data = request.get_json()
-    action = data.get('action') # APPROVE, REJECT, UNDER_REVIEW
+    action = data.get('action') # APPROVE, REJECT, UNDER_REVIEW, SETTLED
     notes = data.get('notes', '')
+    amount = data.get('settlement_amount')
+
+    from services.claim_service import ClaimService
+    claim, error = ClaimService.update_status(claim_id, action, notes, get_jwt_identity(), amount)
     
-    if action == 'APPROVE':
-        claim.status = 'APPROVED'
-        claim.approved_by = get_jwt_identity()
-        claim.approval_date = datetime.utcnow()
-        claim.settlement_amount = data.get('settlement_amount', claim.claim_amount)
-    elif action == 'REJECT':
-        claim.status = 'REJECTED'
-        claim.approved_by = get_jwt_identity()
-        claim.approval_date = datetime.utcnow()
-    elif action == 'UNDER_REVIEW':
-        claim.status = 'UNDER_REVIEW'
+    if error:
+        return jsonify({'status': 'error', 'message': error}), 400
         
-    claim.verification_notes = notes
-    
-    db.session.commit()
     return jsonify({'status': 'success', 'message': f'Claim marked as {claim.status}'}), 200

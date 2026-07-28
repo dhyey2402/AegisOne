@@ -7,12 +7,11 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
-bcrypt = Bcrypt()
-jwt = JWTManager()
-ma = Marshmallow()
+from extensions import db, migrate, bcrypt, jwt, ma
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -22,6 +21,10 @@ def create_app(test_config=None):
     # The user can override with DATABASE_URL in .env
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///insurance.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-super-secret-key-change-in-prod')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload
     

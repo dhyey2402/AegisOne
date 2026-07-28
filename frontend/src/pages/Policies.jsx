@@ -6,6 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
+import { motion } from 'framer-motion';
+
 const policySchema = z.object({
   customer_id: z.string().min(1, 'Customer is required'),
   policy_type: z.string().min(1, 'Type is required'),
@@ -40,7 +42,6 @@ const Policies = () => {
   
   const fetchCustomers = async () => {
     try {
-      // Get a large limit just for the dropdown for prototype
       const res = await api.get('/customers?limit=100');
       setCustomers(res.data.data.items);
     } catch (error) {
@@ -71,8 +72,44 @@ const Policies = () => {
     }
   };
 
+  const handleRenew = async (id) => {
+    try {
+      await api.put(`/policies/${id}/renew`);
+      toast.success('Policy renewed successfully');
+      fetchPolicies();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to renew policy');
+    }
+  };
+
+  const handleStatusChange = async (id, status) => {
+    try {
+      await api.put(`/policies/${id}/status`, { status });
+      toast.success(`Policy marked as ${status}`);
+      fetchPolicies();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  if (loading && policies.length === 0) {
+    return (
+      <div className="p-6 h-full flex flex-col gap-6 animate-pulse">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="h-10 bg-muted rounded w-32"></div>
+        </div>
+        <div className="h-[400px] bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Policies</h1>
@@ -109,6 +146,7 @@ const Policies = () => {
                 <th className="px-6 py-3 font-medium">Type</th>
                 <th className="px-6 py-3 font-medium">Coverage</th>
                 <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -129,13 +167,30 @@ const Policies = () => {
                       {p.policy_type}
                     </td>
                     <td className="px-6 py-4">
-                      ${p.coverage_amount.toLocaleString()}
-                      <div className="text-xs text-muted-foreground">Prem: ${p.premium_amount}/yr</div>
+                      ₹{p.coverage_amount.toLocaleString()}
+                      <div className="text-xs text-muted-foreground">Prem: ₹{p.premium_amount}/yr</div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${p.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : p.status === 'EXPIRED' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
                         {p.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 space-x-2">
+                      {p.status === 'EXPIRED' || p.status === 'CANCELLED' ? (
+                        <button onClick={() => handleRenew(p.id)} className="text-primary hover:underline text-xs font-medium">
+                          Renew
+                        </button>
+                      ) : null}
+                      {p.status === 'ACTIVE' ? (
+                        <button onClick={() => handleStatusChange(p.id, 'SUSPENDED')} className="text-orange-500 hover:underline text-xs font-medium">
+                          Suspend
+                        </button>
+                      ) : null}
+                      {p.status === 'SUSPENDED' ? (
+                        <button onClick={() => handleStatusChange(p.id, 'ACTIVE')} className="text-green-500 hover:underline text-xs font-medium">
+                          Activate
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))
@@ -181,12 +236,12 @@ const Policies = () => {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Coverage Amount ($)</label>
+                    <label className="block text-sm font-medium mb-1">Coverage Amount (₹)</label>
                     <input type="number" step="0.01" {...register('coverage_amount', { valueAsNumber: true })} className="w-full border rounded px-3 py-2 bg-background focus:ring-1 focus:ring-primary outline-none" />
                     {errors.coverage_amount && <p className="text-destructive text-xs mt-1">{errors.coverage_amount.message}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Premium Amount ($)</label>
+                    <label className="block text-sm font-medium mb-1">Premium Amount (₹)</label>
                     <input type="number" step="0.01" {...register('premium_amount', { valueAsNumber: true })} className="w-full border rounded px-3 py-2 bg-background focus:ring-1 focus:ring-primary outline-none" />
                     {errors.premium_amount && <p className="text-destructive text-xs mt-1">{errors.premium_amount.message}</p>}
                   </div>
@@ -214,7 +269,7 @@ const Policies = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

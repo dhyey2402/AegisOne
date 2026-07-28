@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: insurance-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: flask db upgrade && python seed.py && gunicorn -w 4 -b 0.0.0.0:$PORT app:app
+    envVars:
+      - key: FLASK_APP
+        value: app.py
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///insurance.db # Note: Use PostgreSQL in real production on Render!
+    rootDir: backend
+
+  - type: web
+    name: insurance-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: "https://insurance-backend.onrender.com/api"
+    rootDir: frontend

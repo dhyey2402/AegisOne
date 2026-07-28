@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  remember_me: z.boolean().default(false),
 });
 
 const Login = () => {
@@ -18,14 +19,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(loginSchema),
+    defaultValues: { remember_me: false }
   });
 
   const onSubmit = async (data) => {
     try {
       setLoading(true);
       const res = await api.post('/auth/login', data);
-      login(res.data.data.user, res.data.data.access_token, res.data.data.refresh_token);
+      login(res.data.data.user, res.data.data.access_token, res.data.data.refresh_token, data.remember_me);
       toast.success('Welcome back!');
       navigate('/');
     } catch (error) {
@@ -65,6 +67,18 @@ const Login = () => {
                 placeholder="••••••••"
               />
               {errors.password && <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>}
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="remember_me"
+                type="checkbox"
+                {...register('remember_me')}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <label htmlFor="remember_me" className="ml-2 block text-sm text-foreground">
+                Remember me
+              </label>
             </div>
           </div>
 

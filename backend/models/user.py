@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from utils.time import get_ist_now
 from app import db, bcrypt
 
 class User(db.Model):
@@ -10,8 +11,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='CUSTOMER') # ADMIN, AGENT, CUSTOMER
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_ist_now)
+    updated_at = db.Column(db.DateTime, default=get_ist_now, onupdate=get_ist_now)
     
     # Relationships
     customer_profile = db.relationship('Customer', backref='user_account', uselist=False, foreign_keys='Customer.user_id')

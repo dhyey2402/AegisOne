@@ -15,7 +15,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@insurepro.com\",\n  \"password\": \"admin123\"\n}",
+              "raw": "{\n  \"email\": \"admin@aegisone.com\",\n  \"password\": \"admin123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

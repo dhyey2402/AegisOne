@@ -26,7 +26,7 @@ const Layout = () => {
       {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-border bg-white dark:bg-card flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-border">
-          <h1 className="text-xl font-bold text-primary">InsurePro</h1>
+          <h1 className="text-xl font-bold text-primary">AegisOne</h1>
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">

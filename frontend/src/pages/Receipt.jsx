@@ -154,7 +154,7 @@ const Receipt = () => {
                   <ShieldCheck className="text-white w-7 h-7" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-extrabold tracking-tight">InsurePro</h1>
+                  <h1 className="text-3xl font-extrabold tracking-tight">AegisOne</h1>
                   <p className="text-indigo-200 font-medium tracking-wide print:text-slate-500">Global Financial Protection</p>
                 </div>
               </div>
@@ -409,7 +409,7 @@ const Receipt = () => {
         <div className="bg-slate-900 text-slate-400 p-8 text-center print:bg-white print:text-slate-500 print:border-t print:border-slate-200">
           <div className="flex justify-center items-center gap-2 mb-4">
             <ShieldCheck className="w-5 h-5 text-indigo-500 print:text-slate-400" />
-            <span className="text-white font-bold tracking-wider print:text-slate-800">InsurePro</span>
+            <span className="text-white font-bold tracking-wider print:text-slate-800">AegisOne</span>
           </div>
           <p className="text-xs mb-2 leading-relaxed max-w-2xl mx-auto">
             This is a computer generated premium payment receipt and does not require a physical signature. 

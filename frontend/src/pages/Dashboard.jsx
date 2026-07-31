@@ -61,6 +61,54 @@ const Dashboard = () => {
     fetchDashboard();
   }, [user]);
 
+  const lineChartData = useMemo(() => {
+    if (!data?.charts) return null;
+    return {
+      labels: data.charts.revenue.labels,
+      datasets: [
+        {
+          label: 'Collected Premium (₹)',
+          data: data.charts.revenue.data,
+          borderColor: 'hsl(221.2 83.2% 53.3%)',
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          tension: 0.4,
+        },
+      ],
+    };
+  }, [data?.charts]);
+  
+  const lineChartOptions = useMemo(() => ({
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: false },
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  }), []);
+
+  const donutChartData = useMemo(() => {
+    if (!data?.charts) return null;
+    return {
+      labels: data.charts.policy_types.labels.length > 0 ? data.charts.policy_types.labels : ['No Data'],
+      datasets: [
+        {
+          label: 'Policies',
+          data: data.charts.policy_types.data.length > 0 ? data.charts.policy_types.data : [1],
+          backgroundColor: [
+            'rgba(59, 130, 246, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(239, 68, 68, 0.8)',
+            'rgba(139, 92, 246, 0.8)',
+          ],
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [data?.charts]);
+
   if (user?.role === 'CUSTOMER') {
     return (
       <div className="p-6">
@@ -70,7 +118,7 @@ const Dashboard = () => {
     );
   }
 
-  if (loading) {
+  if (loading || !data) {
     return (
       <div className="p-6 h-full flex flex-col gap-6 animate-pulse">
         <div className="h-10 bg-muted rounded w-1/4 mb-4"></div>
@@ -86,48 +134,6 @@ const Dashboard = () => {
   }
 
   const { cards, charts, recent_activities } = data;
-
-  const lineChartData = useMemo(() => ({
-    labels: charts.revenue.labels,
-    datasets: [
-      {
-        label: 'Collected Premium (₹)',
-        data: charts.revenue.data,
-        borderColor: 'hsl(221.2 83.2% 53.3%)',
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-        tension: 0.4,
-      },
-    ],
-  }), [charts]);
-  
-  const lineChartOptions = useMemo(() => ({
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      title: { display: false },
-    },
-    scales: {
-      y: { beginAtZero: true }
-    }
-  }), []);
-
-  const donutChartData = useMemo(() => ({
-    labels: charts.policy_types.labels.length > 0 ? charts.policy_types.labels : ['No Data'],
-    datasets: [
-      {
-        label: 'Policies',
-        data: charts.policy_types.data.length > 0 ? charts.policy_types.data : [1],
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(16, 185, 129, 0.8)',
-          'rgba(245, 158, 11, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(139, 92, 246, 0.8)',
-        ],
-        borderWidth: 1,
-      },
-    ],
-  }), [charts]);
 
   return (
     <motion.div 

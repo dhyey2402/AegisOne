@@ -4,6 +4,7 @@ from extensions import db
 from models.customer import Customer
 from models.user import User
 from sqlalchemy.orm import joinedload, selectinload
+from datetime import datetime
 
 customer_bp = Blueprint('customers', __name__)
 
@@ -124,7 +125,7 @@ def create_customer():
         new_customer = Customer(
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
-            dob=data.get('dob'), # Format: YYYY-MM-DD
+            dob=datetime.strptime(data.get('dob'), '%Y-%m-%d').date() if data.get('dob') else None, # Format: YYYY-MM-DD
             phone=data.get('phone'),
             email=data.get('email'),
             address=data.get('address'),

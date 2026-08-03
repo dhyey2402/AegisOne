@@ -47,6 +47,9 @@ from datetime import timedelta
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
+    if not data:
+        return jsonify({'status': 'error', 'message': 'No input data provided'}), 400
+        
     email = data.get('email')
     password = data.get('password')
     remember_me = data.get('remember_me', False)

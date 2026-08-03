@@ -16,6 +16,15 @@ from extensions import db, migrate, bcrypt, jwt, ma
 def create_app(test_config=None):
     app = Flask(__name__)
     
+    CORS(
+        app,
+        resources={r"/*": {"origins": [
+            "https://aegisone-nine.vercel.app"
+        ]}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+    )
     # Configuration
     # Uses SQLite by default if DATABASE_URL is not set (e.g. for initial dev before Postgres)
     # The user can override with DATABASE_URL in .env
@@ -35,12 +44,6 @@ def create_app(test_config=None):
     
     # Initialize extensions with app
     app.url_map.strict_slashes = False
-    frontend_url = os.environ.get('FRONTEND_URL')
-    origins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000']
-    if frontend_url:
-        origins.extend([url.strip() for url in frontend_url.split(',')])
-        
-    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     db.init_app(app)
     
     with app.app_context():
@@ -95,6 +98,14 @@ def register_error_handlers(app):
 
     @app.errorhandler(500)
     def server_error(error):
+        return {'status': 'error', 'message': 'Internal Server Error'}, 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # Return JSON instead of HTML for HTTP errors
+        if hasattr(e, 'code'):
+            return {'status': 'error', 'message': str(e)}, e.code
+        # For non-HTTP exceptions, return 500
         return {'status': 'error', 'message': 'Internal Server Error'}, 500
 
 if __name__ == '__main__':

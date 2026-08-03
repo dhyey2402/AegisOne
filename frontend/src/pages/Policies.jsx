@@ -74,7 +74,11 @@ const Policies = () => {
 
   const handleRenew = async (id) => {
     try {
-      await api.put(`/policies/${id}/renew`);
+      await api.put(`/policies/${id}/renew`, {}, {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
       toast.success('Policy renewed successfully');
       fetchPolicies();
     } catch (error) {

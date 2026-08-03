@@ -19,7 +19,8 @@ def create_app(test_config=None):
     CORS(
         app,
         resources={r"/*": {"origins": [
-            "https://aegisone-nine.vercel.app"
+            "https://aegisone-nine.vercel.app",
+            "http://localhost:5173"
         ]}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],

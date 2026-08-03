@@ -31,7 +31,7 @@ def upload_document():
         return jsonify({'status': 'error', 'message': 'entity_type and entity_id are required'}), 400
 
     if file and allowed_file(file.filename):
-        upload_folder = os.path.join(current_app.root_path, 'uploads')
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, 'uploads'))
         
         from services.document_service import DocumentService
         doc, error = DocumentService.upload_document(file, entity_type, entity_id, doc_type, get_jwt_identity(), upload_folder)
@@ -54,5 +54,6 @@ def download_document(doc_id):
     if not doc:
         return jsonify({'status': 'error', 'message': 'Document not found'}), 404
         
-    upload_folder = os.path.join(current_app.root_path, 'uploads')
-    return send_from_directory(upload_folder, doc.file_path, as_attachment=True, download_name=doc.file_name)
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, 'uploads'))
+    filename = os.path.basename(doc.file_path)
+    return send_from_directory(upload_folder, filename, as_attachment=True, download_name=doc.file_name)

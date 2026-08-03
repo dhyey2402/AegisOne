@@ -19,18 +19,28 @@ def create_app(test_config=None):
     # Configuration
     # Uses SQLite by default if DATABASE_URL is not set (e.g. for initial dev before Postgres)
     # The user can override with DATABASE_URL in .env
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///insurance.db')
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///insurance.db')
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
     }
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-super-secret-key-change-in-prod')
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-super-secret-key-change-in-prod')
+    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(app.root_path, 'uploads'))
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload
     
     # Initialize extensions with app
     app.url_map.strict_slashes = False
-    CORS(app)
+    frontend_url = os.environ.get('FRONTEND_URL')
+    origins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000']
+    if frontend_url:
+        origins.extend([url.strip() for url in frontend_url.split(',')])
+        
+    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     db.init_app(app)
     
     with app.app_context():
